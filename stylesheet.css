@@ -1,0 +1,25 @@
+
+.ci-history-menu-section {
+    max-height:450px;
+}
+
+.ci-action-btn StIcon {
+    icon-size:16px;
+}
+
+.del-color {
+    color: #bb3016;
+}
+
+.add-color {
+    color: #44945e;           
+}
+
+.tv-status-label {
+    font-size: 36px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: rgba(10,10,10,0.7);
+    border-radius: 5px;
+    padding: .5em;
+}
