@@ -25,7 +25,7 @@ const Tweener = imports.ui.tweener;
 
 // new sesssion
 var soupSyncSession = new Soup.SessionSync();
-let BASE_URL = "http://192.168.0.184";
+let BASE_URL = "http://192.168.0.105:8080";
 
 /* Global variables for use as button to click (button) and a text label. */
 let text, button, new_text, new_url;
@@ -104,7 +104,7 @@ function _changeStatus() {
     */
     Tweener.addTween(text,
                      { opacity: 0,
-                       time: 3,
+                       time: 5,
                        transition: 'easeOutQuad',
                        onComplete: _hideText });
     // Update icon

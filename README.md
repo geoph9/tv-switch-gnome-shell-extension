@@ -15,11 +15,20 @@ The flow is like this:
 
 
 The button icons look like this:
+
 ![Icons](images/icon-preview.png?raw=true "The blue and shut buttons.")
 
 When the shut button is pressed, then the TV will be turned on and a status text will appear in the middle of the screen, like this:
+
 ![Central Text](images/central-text-preview.png?raw=true "How the text appears.")
+
+## How to Install
+
+You may clone this repository and change the `extension.js` file. At first you may change the `BASE_URL` variable which is set to my server's IP. You should also change the endpoints that are decided in the `_changeStatus` function.
+
+The installation and usage is then just like any other extension. You can get rid of the unwanted files (`.git`, `images/` directories and the `README.md` file) and then copy the rest to `~/.local/share/gnome-shell/extensions/tv-switch-gnome-shell-extension` (or wherever your gnome extensions are saved). You need to make sure that the name of the directory is the above (it must be the project's `uuid` which is defined in `metadata.json`).
 
 ## TODO:
 
 - Connect the temperature sensor to the extension. A new label should appear in the top bar that updates the home temperature every 5-15 minutes.
+- Function as a remote control (i don't have one and it would be useful in my case).
