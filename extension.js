@@ -25,7 +25,7 @@ const Tweener = imports.ui.tweener;
 
 // new sesssion
 var soupSyncSession = new Soup.SessionSync();
-let BASE_URL = "http://192.168.0.105:8080";
+let BASE_URL = "http://192.168.0.105:8080";  // Raspberry-Pi server URL
 
 /* Global variables for use as button to click (button) and a text label. */
 let text, button, new_text, new_url;
@@ -40,11 +40,39 @@ function _hideText() {
     text = null;
 }
 
+/*
+TV-Power-Switch Variables
+*/
 let icon;
 let tv_is_open=false;
 const PlayTV = 'tv-play-blue.png';  //'tv-play.svg';
 const PauseTV = 'tv-shut-blue.png';
 let new_icon = PauseTV;
+
+/*
+Weather-Related Variables / Endpoints
+*/
+const weatherStatsURL = `${BASE_URL}/api/get-weather-stats/`;  // URL for both the temp and humidity
+// Note: the apis below respond with a single value (not a json) in my case
+const tempURL = `${BASE_URL}/api/get-temperature/`;
+const humidityURL = `${BASE_URL}/api/get-humidity/`;
+let currentTemperature;
+let currentHumidity;
+
+
+function _getWeatherStats(onlyTemperature=true) {
+    if (onlyTemperature)
+        const statsURL = tempURL;
+    var message = Soup.Message.new('GET', tempURL);
+    var responseCode = soupSyncSession.send_message(message);
+    if(responseCode == 200) {
+        var responseBody = message['response-body'];
+        new_text = JSON.parse(responseBody.data);
+    } else {
+        new_text = "Failed";
+    }
+    return new_text;
+}
 
 
 function _changeStatus() {
