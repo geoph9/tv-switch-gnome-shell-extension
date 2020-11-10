@@ -27,22 +27,11 @@ const Tweener = imports.ui.tweener;
 var soupSyncSession = new Soup.SessionSync();
 let BASE_URL = "http://192.168.0.105:8080";  // Raspberry-Pi server URL
 
-/* Global variables for use as button to click (button) and a text label. */
-let text, button, new_text, new_url;
-
-/*
-Function to call when the label is opacity 0%, as the label remains as a
-UI element, but not visible, we have to delete it explicitily. So since
-the label reaches 0% of opacity we remove it from Main instance.
-*/
-function _hideText() {
-    Main.uiGroup.remove_actor(text);
-    text = null;
-}
-
 /*
 TV-Power-Switch Variables
 */
+/* Global variables for use as button to click (button) and a text label. */
+let text, button, tvStatusText, tvSwitchURL;
 let icon;
 let tv_is_open=false;
 const PlayTV = 'tv-play-blue.png';  //'tv-play.svg';
@@ -56,58 +45,67 @@ const weatherStatsURL = `${BASE_URL}/api/get-weather-stats/`;  // URL for both t
 // Note: the apis below respond with a single value (not a json) in my case
 const tempURL = `${BASE_URL}/api/get-temperature/`;
 const humidityURL = `${BASE_URL}/api/get-humidity/`;
-let currentTemperature;
-let currentHumidity;
+let currentStats;  // a dictionary with 2 keys (temp and humidity). Currently only temp is used.
+
+/*
+Function to call when the label is opacity 0%, as the label remains as a
+UI element, but not visible, we have to delete it explicitily. So since
+the label reaches 0% of opacity we remove it from Main instance.
+*/
+function _hideText() {
+    Main.uiGroup.remove_actor(text);
+    text = null;
+}
 
 
-function _getWeatherStats(onlyTemperature=true) {
+function _getWeatherStats(onlyTemperature=false) {
     if (onlyTemperature)
         const statsURL = tempURL;
+    else
+        const statsURL = weatherStatsURL
     var message = Soup.Message.new('GET', tempURL);
     var responseCode = soupSyncSession.send_message(message);
     if(responseCode == 200) {
-        var responseBody = message['response-body'];
-        new_text = JSON.parse(responseBody.data);
+        currentStats = JSON.parse(message['response-body'].data);
     } else {
-        new_text = "Failed";
+        currentStats = {temp: 'Failed', humidity: 'Failed'}
     }
-    return new_text;
+    return currentStats;
 }
 
 
 function _changeStatus() {
-
     // Handle request
     // Change icon/text/url based on the request
     if (tv_is_open){
         new_icon = PauseTV;
-        new_text="TV Status: OFF";
-        new_url=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
+        tvStatusText="TV Status: OFF";
+        tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
         tv_is_open = false;
     } else {
         new_icon = PlayTV;
-        new_text="TV Status: ON";
-        new_url=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
+        tvStatusText="TV Status: ON";
+        tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
         tv_is_open = true;
     }
 
-	var message = Soup.Message.new('GET', new_url);
+	var message = Soup.Message.new('GET', tvSwitchURL);
 	var responseCode = soupSyncSession.send_message(message);
 	// if(responseCode == 200) {
 	// 	var responseBody = message['response-body'];
 	// 	var response = JSON.parse(responseBody.data);
 	// } else {
-	// 	new_text = "Failed";
+	// 	tvStatusText = "Failed";
 	// }
     if(responseCode !== 200)  {
-        new_text = "Failed";
+        tvStatusText = "Failed";
     }
     /*
     If text not already present, we create a new UI element, using ST library, that allows us
     to create UI elements of gnome-shell.
     */
     if (!text) {
-        text = new St.Label({ style_class: 'tv-status-label', text: `${new_text}` });
+        text = new St.Label({ style_class: 'tv-status-label', text: `${tvStatusText}` });
         Main.uiGroup.add_actor(text);
     }
 
