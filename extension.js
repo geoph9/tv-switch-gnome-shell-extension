@@ -59,12 +59,12 @@ function _hideText() {
 }
 
 
-function _getWeatherStats(onlyTemperature=false) {
-    if (onlyTemperature)
-        const statsURL = tempURL;
-    else
-        const statsURL = weatherStatsURL
-    var message = Soup.Message.new('GET', tempURL);
+function _getWeatherStats() {
+    /* 
+    Returns a JS Object with temp (temperature) and humidity as retrieved from the server.
+    This hasn't been tested yet since the corresponding endpoints are not live.
+    */
+    var message = Soup.Message.new('GET', weatherStatsURL);
     var responseCode = soupSyncSession.send_message(message);
     if(responseCode == 200) {
         currentStats = JSON.parse(message['response-body'].data);
@@ -75,7 +75,7 @@ function _getWeatherStats(onlyTemperature=false) {
     return currentStats;
 }
 
-function setCurrentTvStatusImage() {
+function setCurrentTvStatus() {
     // changes the value of tv_is_open based on the current tv status
     //  as retrieved from the server.
     // If the response code is not 200 (so there was a failure) then the status does not change.
@@ -86,16 +86,23 @@ function setCurrentTvStatusImage() {
         // returns a simple value (NOT JSON)
         // TODO: Change server so that it always returns JSONS
         const tvStatus = message['response-body'].data;
-        if (Number(tvStatus) === 1) {
-            tv_is_open = true;
-            new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
-            tvStatusText="TV Status: OFF";
-            tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
-        } else {
-            tv_is_open = false;
-            new_icon = PlayTV;  // to open the TV
-            tvStatusText="TV Status: ON";
-            tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
+        try {
+            if (Number(tvStatus) === 1) {
+                tv_is_open = true;
+                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
+                tvStatusText="TV Status: OFF";
+                tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
+            } else {
+                tv_is_open = false;
+                new_icon = PlayTV;  // to open the TV
+                tvStatusText="TV Status: ON";
+                tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
+            }
+        } 
+        catch (error) {
+            // TODO: Handle this
+            // Current behaviour: Leave everything the same as before
+            console.log(error);
         }
     }
 }
@@ -104,7 +111,7 @@ function setCurrentTvStatusImage() {
 function _changeStatus() {
     // Handle request
     // Change icon/text/url based on the request
-    // setCurrentTvStatusImage();  // this line of code can get rid of the following if block
+    // setCurrentTvStatus();  // this line of code can get rid of the following if block
     if (tv_is_open){
         new_icon = PauseTV;
         tvStatusText="TV Status: OFF";
@@ -117,12 +124,6 @@ function _changeStatus() {
     tv_is_open = !(tv_is_open);  // update tv_is_open
 	var message = Soup.Message.new('GET', tvSwitchURL);
 	var responseCode = soupSyncSession.send_message(message);
-	// if(responseCode == 200) {
-	// 	var responseBody = message['response-body'];
-	// 	var response = JSON.parse(responseBody.data);
-	// } else {
-	// 	tvStatusText = "Failed";
-	// }
     if(responseCode !== 200)  {
         tvStatusText = "Failed";
     }
@@ -189,7 +190,7 @@ function init() {
     //                          style_class: 'system-status-icon' });
     icon = new St.Icon({ style_class: 'system-status-icon' });
     // TODO: Get current tv-switch status and show the corresponding image
-    // setCurrentTvStatusImage();  // this changes both new_icon and tv_is_open
+    // setCurrentTvStatus();  // this changes both new_icon and tv_is_open
     // icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
     icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${PauseTV}`);
 
