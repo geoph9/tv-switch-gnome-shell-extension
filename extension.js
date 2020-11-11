@@ -25,7 +25,7 @@ const Tweener = imports.ui.tweener;
 
 // new sesssion
 var soupSyncSession = new Soup.SessionSync();
-let BASE_URL = "http://192.168.0.105:8080";  // Raspberry-Pi server URL
+let BASE_URL = "http://192.168.0.105:8081";  // Raspberry-Pi server URL
 
 /*
 TV-Power-Switch Variables
@@ -45,7 +45,7 @@ const weatherStatsURL = `${BASE_URL}/api/get-weather-stats/`;  // URL for both t
 // Note: the apis below respond with a single value (not a json) in my case
 const tempURL = `${BASE_URL}/api/get-temperature/`;
 const humidityURL = `${BASE_URL}/api/get-humidity/`;
-const tvStatusURL = `${BASE_URL}/api/get-tv-status/`
+const tvStatusURL = `${BASE_URL}/get-tv-status/`
 let currentStats;  // a dictionary with 2 keys (temp and humidity). Currently only temp is used.
 
 /*
@@ -71,7 +71,7 @@ function _getWeatherStats() {
     } else {
         currentStats = {temp: 'Failed', humidity: 'Failed'}
     }
-    console.log("CURRENT STATS: " + currentStats);
+    log("CURRENT STATS: " + currentStats);
     return currentStats;
 }
 
@@ -83,26 +83,22 @@ function setCurrentTvStatus() {
     var responseCode = soupSyncSession.send_message(message);
     
     if(responseCode == 200) {
-        // returns a simple value (NOT JSON)
-        // TODO: Change server so that it always returns JSONS
-        const tvStatus = message['response-body'].data;
+        const tvStatus = JSON.parse(message['response-body'].data).currentStatus;
         try {
             if (Number(tvStatus) === 1) {
-                tv_is_open = true;
-                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
-                tvStatusText="TV Status: OFF";
-                tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
-            } else {
-                tv_is_open = false;
                 new_icon = PlayTV;  // to open the TV
                 tvStatusText="TV Status: ON";
-                tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
+                tvSwitchURL=`${BASE_URL}/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
+            } else {
+                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
+                tvStatusText="TV Status: OFF";
+                tvSwitchURL=`${BASE_URL}/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
             }
         } 
         catch (error) {
             // TODO: Handle this
             // Current behaviour: Leave everything the same as before
-            console.log(error);
+            log("ERROR OCCURED WHILE SETTING TV STATUS: " + error);
         }
     }
 }
@@ -111,17 +107,7 @@ function setCurrentTvStatus() {
 function _changeStatus() {
     // Handle request
     // Change icon/text/url based on the request
-    // setCurrentTvStatus();  // this line of code can get rid of the following if block
-    if (tv_is_open){
-        new_icon = PauseTV;
-        tvStatusText="TV Status: OFF";
-        tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
-    } else {
-        new_icon = PlayTV;
-        tvStatusText="TV Status: ON";
-        tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
-    }
-    tv_is_open = !(tv_is_open);  // update tv_is_open
+    setCurrentTvStatus();  // this line of code can get rid of the following if block
 	var message = Soup.Message.new('GET', tvSwitchURL);
 	var responseCode = soupSyncSession.send_message(message);
     if(responseCode !== 200)  {
@@ -190,9 +176,10 @@ function init() {
     //                          style_class: 'system-status-icon' });
     icon = new St.Icon({ style_class: 'system-status-icon' });
     // TODO: Get current tv-switch status and show the corresponding image
-    // setCurrentTvStatus();  // this changes both new_icon and tv_is_open
-    // icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
-    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${PauseTV}`);
+    setCurrentTvStatus();  // this changes both new_icon and tv_is_open
+    log("GOT NEW ICON PATH: " + new_icon);
+    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
+    // icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${PauseTV}`);
 
     /*
     We put as a child of the button the icon, so, in the structure of actors we have the icon inside the button that is a
