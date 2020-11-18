@@ -28,6 +28,8 @@ You may clone this repository and change the `extension.js` file. At first you m
 
 The installation and usage is then just like any other extension. You can get rid of the unwanted files (`.git`, `images/` directories and the `README.md` file) and then copy the rest to `~/.local/share/gnome-shell/extensions/tv-switch-gnome-shell-extension` (or wherever your gnome extensions are saved). You need to make sure that the name of the directory is the above (it must be the project's `uuid` which is defined in `metadata.json`).
 
+The extension is built for version `3.36` of the gnome-shell (will not work in `3.38` due to the big changes that occurred).
+
 ## TODO:
 
 - Connect the temperature sensor to the extension. A new label should appear in the top bar that updates the home temperature every 5-15 minutes.

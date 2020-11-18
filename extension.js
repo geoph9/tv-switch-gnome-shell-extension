@@ -25,7 +25,7 @@ const Tweener = imports.ui.tweener;
 
 // new sesssion
 var soupSyncSession = new Soup.SessionSync();
-let BASE_URL = "http://192.168.0.105:8081";  // Raspberry-Pi server URL
+let BASE_URL = "http://192.168.0.105:8080";  // Raspberry-Pi server URL
 
 /*
 TV-Power-Switch Variables
