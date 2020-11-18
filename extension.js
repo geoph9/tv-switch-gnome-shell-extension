@@ -36,7 +36,7 @@ let icon;
 let tv_is_open=false;
 const PlayTV = 'tv-play-blue.png';  //'tv-play.svg';
 const PauseTV = 'tv-shut-blue.png';
-let new_icon = PauseTV;
+let new_icon;
 
 /*
 Weather-Related Variables / Endpoints
@@ -81,19 +81,21 @@ function setCurrentTvStatus() {
     // If the response code is not 200 (so there was a failure) then the status does not change.
     let message = Soup.Message.new('GET', tvStatusURL);
     var responseCode = soupSyncSession.send_message(message);
-    
+
     if(responseCode == 200) {
         const tvStatus = JSON.parse(message['response-body'].data).currentStatus;
+        log("GOT TV STATUS: " + tvStatus);
         try {
-            if (Number(tvStatus) === 1) {
-                new_icon = PlayTV;  // to open the TV
+            if (Number(tvStatus) === 1) {  // the tv is open
+                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
                 tvStatusText="TV Status: ON";
                 tvSwitchURL=`${BASE_URL}/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
             } else {
-                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
+                new_icon = PlayTV;  // to open the TV
                 tvStatusText="TV Status: OFF";
                 tvSwitchURL=`${BASE_URL}/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
             }
+            log("NEW ICON:" + new_icon);
         } 
         catch (error) {
             // TODO: Handle this
@@ -104,12 +106,12 @@ function setCurrentTvStatus() {
 }
 
 
-function _changeStatus() {
+async function _changeStatus() {
     // Handle request
-    // Change icon/text/url based on the request
-    setCurrentTvStatus();  // this line of code can get rid of the following if block
 	var message = Soup.Message.new('GET', tvSwitchURL);
 	var responseCode = soupSyncSession.send_message(message);
+    // Change icon/text/url based on the request
+    setCurrentTvStatus();
     if(responseCode !== 200)  {
         tvStatusText = "Failed";
     }
@@ -135,19 +137,20 @@ function _changeStatus() {
     */
     text.set_position(monitor.x + Math.floor(monitor.width / 2 - text.width / 2),
                       monitor.y + Math.floor(monitor.height / 2 - text.height / 2));
+    
+    // Update icon
+    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
 
     /*
     And using tweener for the animations, we indicate to tweener that we want
     to go to opacity 0%, in 2 seconds, with the type of transition easeOutQuad, and,
     when this animation has completed, we execute our function _hideText.
     */
-    Tweener.addTween(text,
+    await Tweener.addTween(text,
                      { opacity: 0,
-                       time: 5,
+                       time: 2,
                        transition: 'easeOutQuad',
                        onComplete: _hideText });
-    // Update icon
-    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
 }
 
 /*
@@ -174,9 +177,10 @@ function init() {
     */    
     // let icon = new St.Icon({ icon_name: 'system-run-symbolic',
     //                          style_class: 'system-status-icon' });
+    log("CALLING SET CURRENT STATUS");
+    setCurrentTvStatus();  // this changes both new_icon and tv_is_open
     icon = new St.Icon({ style_class: 'system-status-icon' });
     // TODO: Get current tv-switch status and show the corresponding image
-    setCurrentTvStatus();  // this changes both new_icon and tv_is_open
     log("GOT NEW ICON PATH: " + new_icon);
     icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
     // icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${PauseTV}`);
