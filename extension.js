@@ -1,10 +1,9 @@
-/*
-In this example we will be click a button in the top bar,
-causing an event that create a text label (hello world), which with some
-animation, will be decreasing its opacity from 100% to 0%
-*/
-
 const Me = imports.misc.extensionUtils.getCurrentExtension();
+
+// Import utils from another file
+const ExtensionUtils = imports.misc.extensionUtils;
+const Meta = ExtensionUtils.getCurrentExtension();
+const Utils = Meta.imports.utils;
 
 // For the GET Requests
 const Soup = imports.gi.Soup;
@@ -13,6 +12,9 @@ const Soup = imports.gi.Soup;
 const St = imports.gi.St;
 
 const Gio = imports.gi.Gio;
+
+// MainLoop for updating the time every X seconds.
+const Mainloop = imports.mainloop;
 
 /*
 Import Main because is the instance of the class that have all the UI elements
@@ -23,8 +25,6 @@ const Main = imports.ui.main;
 /* Import tweener to do the animations of the UI elements */
 const Tweener = imports.ui.tweener;
 
-// new sesssion
-var soupSyncSession = new Soup.SessionSync();
 let BASE_URL = "http://192.168.0.105:8080";  // Raspberry-Pi server URL
 
 /*
@@ -33,10 +33,10 @@ TV-Power-Switch Variables
 /* Global variables for use as button to click (button) and a text label. */
 let text, button, tvStatusText, tvSwitchURL;
 let icon;
-let tv_is_open=false;
+let currentTvStatus;
 const PlayTV = 'tv-play-blue.png';  //'tv-play.svg';
 const PauseTV = 'tv-shut-blue.png';
-let new_icon = PauseTV;
+let new_icon;
 
 /*
 Weather-Related Variables / Endpoints
@@ -45,7 +45,7 @@ const weatherStatsURL = `${BASE_URL}/api/get-weather-stats/`;  // URL for both t
 // Note: the apis below respond with a single value (not a json) in my case
 const tempURL = `${BASE_URL}/api/get-temperature/`;
 const humidityURL = `${BASE_URL}/api/get-humidity/`;
-const tvStatusURL = `${BASE_URL}/api/get-tv-status/`
+const tvStatusURL = `${BASE_URL}/get-tv-status/`
 let currentStats;  // a dictionary with 2 keys (temp and humidity). Currently only temp is used.
 
 /*
@@ -58,74 +58,97 @@ function _hideText() {
     text = null;
 }
 
+/*
+    =====================================================================================
+    ==================================== REFRESHERS =====================================
+    =====================================================================================
+*/
+function _refreshWeatherStats() {
+    _getWeatherStats();
+    // Add weather stats implementation
 
+    return false; // will execute this function only once and abort.
+}
+
+function _refreshTVStatus() {
+    /*
+        The purpose of this function is to refresh the icons and the text 
+        for the current tv status.
+        This is needed because the tv status can change from more than 5 different 
+        sources and we have to sync all of these.
+
+        The above is achieved by pinging the /api/check-tv-status-changed/ endpoint of my
+        rpi. This will return true if the status has changed and false otherwise. If true, 
+        we are going to set the new paths accordingly and update the icon.
+    */
+    let tvStatusChanged = Utils.sendRequest(`${BASE_URL}/api/check-tv-status-changed/${currentTvStatus}/`, 'GET');
+    if(tvStatusChanged === false){  // means an error occurred in sendRequest
+        return true;  // do not change anything
+    }
+    // Check if the status has changed (otherwise there is no need to re-write the data)
+    if (tvStatusChanged.changed) {
+        // update the icon
+        currentTvStatus = Number(tvStatusChanged.current_status);
+        _setTvPaths();  // with the new status
+        // Update icon
+        icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
+    }
+    return true;  // in order to run the function forever (resource intensive..)
+}
+
+
+/*
+    =====================================================================================
+    =========================== WEATHER STATION (EXPERIMENTAL) ==========================
+    =====================================================================================
+*/
 function _getWeatherStats() {
     /* 
     Returns a JS Object with temp (temperature) and humidity as retrieved from the server.
     This hasn't been tested yet since the corresponding endpoints are not live.
     */
-    var message = Soup.Message.new('GET', weatherStatsURL);
-    var responseCode = soupSyncSession.send_message(message);
-    if(responseCode == 200) {
-        currentStats = JSON.parse(message['response-body'].data);
-    } else {
-        currentStats = {temp: 'Failed', humidity: 'Failed'}
+    currentStats = Utils.sendRequest(weatherStatsURL, 'GET');
+    if(currentStats === false){
+        currentStats = {temp: '-', humidity: '-'};
     }
-    console.log("CURRENT STATS: " + currentStats);
-    return currentStats;
-}
-
-function setCurrentTvStatus() {
-    // changes the value of tv_is_open based on the current tv status
-    //  as retrieved from the server.
-    // If the response code is not 200 (so there was a failure) then the status does not change.
-    let message = Soup.Message.new('GET', tvStatusURL);
-    var responseCode = soupSyncSession.send_message(message);
-    
-    if(responseCode == 200) {
-        // returns a simple value (NOT JSON)
-        // TODO: Change server so that it always returns JSONS
-        const tvStatus = message['response-body'].data;
-        try {
-            if (Number(tvStatus) === 1) {
-                tv_is_open = true;
-                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
-                tvStatusText="TV Status: OFF";
-                tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
-            } else {
-                tv_is_open = false;
-                new_icon = PlayTV;  // to open the TV
-                tvStatusText="TV Status: ON";
-                tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
-            }
-        } 
-        catch (error) {
-            // TODO: Handle this
-            // Current behaviour: Leave everything the same as before
-            console.log(error);
-        }
-    }
+    log("CURRENT STATS: " + currentStats);
 }
 
 
-function _changeStatus() {
-    // Handle request
-    // Change icon/text/url based on the request
-    // setCurrentTvStatus();  // this line of code can get rid of the following if block
-    if (tv_is_open){
-        new_icon = PauseTV;
-        tvStatusText="TV Status: OFF";
-        tvSwitchURL=`${BASE_URL}/turn-on-led/`;  // turn-on-led is the endpoint for turning on the relay
-    } else {
-        new_icon = PlayTV;
+/*
+    =====================================================================================
+    ================================= CHANGE SPEC PATHS =================================
+    =====================================================================================
+*/
+function _setTvPaths() {
+    if (currentTvStatus === 1) {  // the tv is open
+        new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
         tvStatusText="TV Status: ON";
-        tvSwitchURL=`${BASE_URL}/turn-off-led/`;  // turn-on-led is the endpoint for turning on the relay
+        tvSwitchURL=`${BASE_URL}/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
+    } else {
+        new_icon = PlayTV;  // to open the TV
+        tvStatusText="TV Status: OFF";
+        tvSwitchURL=`${BASE_URL}/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
     }
-    tv_is_open = !(tv_is_open);  // update tv_is_open
-	var message = Soup.Message.new('GET', tvSwitchURL);
-	var responseCode = soupSyncSession.send_message(message);
-    if(responseCode !== 200)  {
+}
+
+
+/*
+    =====================================================================================
+    =============================== SET THE CURRENT STATUS ==============================
+    =====================================================================================
+*/
+
+// main handler
+async function _changeStatus() {
+    // Handle request
+    let urlStatus = Utils.sendRequest(tvSwitchURL, 'GET');
+    // Change icon/text/url based on the request
+    currentTvStatus = Utils.setCurrentTvStatus(tvStatusURL);
+    if(urlStatus === false  || currentTvStatus===-1)  {  // -1 means error
         tvStatusText = "Failed";
+    } else {
+        _setTvPaths();
     }
     /*
     If text not already present, we create a new UI element, using ST library, that allows us
@@ -149,19 +172,20 @@ function _changeStatus() {
     */
     text.set_position(monitor.x + Math.floor(monitor.width / 2 - text.width / 2),
                       monitor.y + Math.floor(monitor.height / 2 - text.height / 2));
+    
+    // Update icon
+    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
 
     /*
     And using tweener for the animations, we indicate to tweener that we want
     to go to opacity 0%, in 2 seconds, with the type of transition easeOutQuad, and,
     when this animation has completed, we execute our function _hideText.
     */
-    Tweener.addTween(text,
+    await Tweener.addTween(text,
                      { opacity: 0,
-                       time: 5,
+                       time: 2,
                        transition: 'easeOutQuad',
                        onComplete: _hideText });
-    // Update icon
-    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
 }
 
 /*
@@ -169,13 +193,6 @@ This is the init function, here we have to put our code to initialize our extens
 we have to be careful with init(), enable() and disable() and do the right things here.
 */
 function init() {
-    /*
-    We create a button for the top panel. We pass to the constructor a map of properties, properties from St.Bin and its
-    parent classes, like St.Widget. So we declare this properties: a style class(from css theming of gnome shell), we made it reactive
-    so the button respond for the mouse clicks, we made it that can focus, so marks the button as being able to receive keyboard focus 
-    via keyboard navigation, we made the button to fill the x space, and we don't want to fill the y space, so we set the values trues and false respectively
-    and we want that the button be reactive to the hover of the mouse, so we set the value of the track_hover property to true.
-    */
     button = new St.Bin({ style_class: 'panel-button',
                           reactive: true,
                           can_focus: true,
@@ -185,18 +202,19 @@ function init() {
 
     /*
     We create an icon with the system-status-icon icon and give it the name "system-run"
-    */    
-    // let icon = new St.Icon({ icon_name: 'system-run-symbolic',
-    //                          style_class: 'system-status-icon' });
+    */
+    currentTvStatus = Utils.setCurrentTvStatus(tvStatusURL);  // this changes both new_icon and tv_is_open
+    if(currentTvStatus !== -1)  {  // if no error occurred
+        _setTvPaths();
+    }
     icon = new St.Icon({ style_class: 'system-status-icon' });
     // TODO: Get current tv-switch status and show the corresponding image
-    // setCurrentTvStatus();  // this changes both new_icon and tv_is_open
-    // icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
-    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${PauseTV}`);
+    log("GOT NEW ICON PATH: " + new_icon);
+    icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
 
     /*
-    We put as a child of the button the icon, so, in the structure of actors we have the icon inside the button that is a
-    container.
+    We put as a child of the button the icon, so, in the structure of actors we have the 
+    icon inside the button that is a container.
     */
     button.set_child(icon);
 
@@ -207,6 +225,12 @@ function init() {
     this signals comes from the actor class)
     */
     button.connect('button-press-event', _changeStatus);
+
+    // Change the tv status every X seconds (check function for comments)
+    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
+
+    // Change the weather values every X seconds
+    Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
 }
 
 /*
@@ -224,8 +248,6 @@ We have to delete all conections and things from our extensions, to let the syst
 We have to unconnect the signals we connect, we have to delete all UI elements we created, etc.
 */
 function disable() {
-    /*
-    We remove the button from the right panel
-    */
+    // We remove the button from the right panel
     Main.panel._rightBox.remove_child(button);
 }
