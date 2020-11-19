@@ -14,6 +14,9 @@ const St = imports.gi.St;
 
 const Gio = imports.gi.Gio;
 
+// MainLoop for updating the time every X seconds.
+const Mainloop = imports.mainloop;
+
 /*
 Import Main because is the instance of the class that have all the UI elements
 and we have to add to the Main instance our UI elements
@@ -73,6 +76,12 @@ function _getWeatherStats() {
     }
     log("CURRENT STATS: " + currentStats);
     return currentStats;
+}
+
+function _refreshWeatherStats() {
+    const currentStats = _getWeatherStats();
+    // Add weather stats implementation
+
 }
 
 function setCurrentTvStatus() {
@@ -198,6 +207,9 @@ function init() {
     this signals comes from the actor class)
     */
     button.connect('button-press-event', _changeStatus);
+
+    // Change the weather values every X seconds
+    Mainloop.timeout_add_seconds(5, _refreshWeatherStats);
 }
 
 /*
