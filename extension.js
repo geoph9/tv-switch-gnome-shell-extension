@@ -36,7 +36,7 @@ TV-Power-Switch Variables
 /* Global variables for use as button to click (button) and a text label. */
 let text, button, tvStatusText, tvSwitchURL;
 let icon;
-let tv_is_open=false;
+let currentTvStatus;
 const PlayTV = 'tv-play-blue.png';  //'tv-play.svg';
 const PauseTV = 'tv-shut-blue.png';
 let new_icon;
@@ -67,13 +67,12 @@ function _getWeatherStats() {
     Returns a JS Object with temp (temperature) and humidity as retrieved from the server.
     This hasn't been tested yet since the corresponding endpoints are not live.
     */
-    var message = Soup.Message.new('GET', weatherStatsURL);
-    var responseCode = soupSyncSession.send_message(message);
-    if(responseCode == 200) {
+    let message = Soup.Message.new('GET', weatherStatsURL);
+    let responseCode = soupSyncSession.send_message(message);
+    if(responseCode == 200)
         currentStats = JSON.parse(message['response-body'].data);
-    } else {
+    else 
         currentStats = {temp: 'Failed', humidity: 'Failed'}
-    }
     log("CURRENT STATS: " + currentStats);
     return currentStats;
 }
@@ -84,27 +83,61 @@ function _refreshWeatherStats() {
 
 }
 
+function _refreshTVStatus() {
+    /*
+        The purpose of this function is to refresh the icons and the text 
+        for the current tv status.
+        This is needed because the tv status can change from more than 5 different 
+        sources and we have to sync all of these.
+
+        The above is achieved by pinging the /api/check-tv-status-changed/ endpoint of my
+        rpi. This will return true if the status has changed and false otherwise. If true, 
+        we are going to set the new paths accordingly and update the icon.
+    */
+    let message = Soup.Message.new('GET', `${BASE_URL}/api/check-tv-status-changed/${currentTvStatus}/`);
+    let responseCode = soupSyncSession.send_message(message);
+    let tvStatusChanged;
+    if(responseCode == 200){
+        tvStatusChanged = JSON.parse(message['response-body'].data);
+    }else{
+        return true;  // do not change anything
+    }
+    // Check if the status has changed (otherwise there is no need to re-write the data)
+    if (tvStatusChanged.changed) {
+        // update the icon
+        currentTvStatus = Number(tvStatusChanged.current_status);
+        _setTvPaths();  // with the new status
+        // Update icon
+        icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
+    }
+    return true;  // in order to run the function forever (resource intensive..)
+}
+
+function _setTvPaths() {
+    if (currentTvStatus === 1) {  // the tv is open
+        new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
+        tvStatusText="TV Status: ON";
+        tvSwitchURL=`${BASE_URL}/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
+    } else {
+        new_icon = PlayTV;  // to open the TV
+        tvStatusText="TV Status: OFF";
+        tvSwitchURL=`${BASE_URL}/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
+    }
+}
+
 function setCurrentTvStatus() {
     // changes the value of tv_is_open based on the current tv status
     //  as retrieved from the server.
     // If the response code is not 200 (so there was a failure) then the status does not change.
     let message = Soup.Message.new('GET', tvStatusURL);
-    var responseCode = soupSyncSession.send_message(message);
+    let responseCode = soupSyncSession.send_message(message);
 
     if(responseCode == 200) {
-        const tvStatus = JSON.parse(message['response-body'].data).currentStatus;
-        log("GOT TV STATUS: " + tvStatus);
         try {
-            if (Number(tvStatus) === 1) {  // the tv is open
-                new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
-                tvStatusText="TV Status: ON";
-                tvSwitchURL=`${BASE_URL}/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
-            } else {
-                new_icon = PlayTV;  // to open the TV
-                tvStatusText="TV Status: OFF";
-                tvSwitchURL=`${BASE_URL}/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
-            }
-            log("NEW ICON:" + new_icon);
+            currentTvStatus = JSON.parse(message['response-body'].data).currentStatus;
+            currentTvStatus = Number(currentTvStatus);
+            log("GOT TV STATUS: " + currentTvStatus);
+            _setTvPaths();
         } 
         catch (error) {
             // TODO: Handle this
@@ -117,8 +150,8 @@ function setCurrentTvStatus() {
 
 async function _changeStatus() {
     // Handle request
-	var message = Soup.Message.new('GET', tvSwitchURL);
-	var responseCode = soupSyncSession.send_message(message);
+	let message = Soup.Message.new('GET', tvSwitchURL);
+	let responseCode = soupSyncSession.send_message(message);
     // Change icon/text/url based on the request
     setCurrentTvStatus();
     if(responseCode !== 200)  {
@@ -207,6 +240,9 @@ function init() {
     this signals comes from the actor class)
     */
     button.connect('button-press-event', _changeStatus);
+
+    // Change the tv status every X seconds (check function for comments)
+    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
 
     // Change the weather values every X seconds
     Mainloop.timeout_add_seconds(5, _refreshWeatherStats);
