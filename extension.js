@@ -92,6 +92,8 @@ function _refreshTVStatus() {
         _setTvPaths();  // with the new status
         // Update icon
         icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
+        // Send a notification only when someone else opened/closed the tv
+        Main.notify(_("TV " + (currentTvStatus===1 ? "OPENED" : "CLOSED")));
     }
     return true;  // in order to run the function forever (resource intensive..)
 }
@@ -142,12 +144,13 @@ function _setTvPaths() {
 // main handler
 async function _changeStatus() {
     // Handle request
-    let urlStatus = Utils.sendRequest(tvSwitchURL, 'GET');
-    // Change icon/text/url based on the request
-    currentTvStatus = Utils.setCurrentTvStatus(tvStatusURL);
-    if(urlStatus === false  || currentTvStatus===-1)  {  // -1 means error
+    // let urlStatusData = {currentStatus: 1};
+    let urlStatusData = Utils.sendRequest(tvSwitchURL, 'GET');
+    if (urlStatusData === false) {
         tvStatusText = "Failed";
     } else {
+        currentTvStatus = urlStatusData.currentStatus;
+        // Change icon/text/url based on the request
         _setTvPaths();
     }
     /*
@@ -203,7 +206,7 @@ function init() {
     /*
     We create an icon with the system-status-icon icon and give it the name "system-run"
     */
-    currentTvStatus = Utils.setCurrentTvStatus(tvStatusURL);  // this changes both new_icon and tv_is_open
+    currentTvStatus = Utils.getCurrentTvStatus(tvStatusURL);  // this changes both new_icon and tv_is_open
     if(currentTvStatus !== -1)  {  // if no error occurred
         _setTvPaths();
     }
