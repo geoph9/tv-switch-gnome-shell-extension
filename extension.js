@@ -23,7 +23,8 @@ and we have to add to the Main instance our UI elements
 const Main = imports.ui.main;
 
 /* Import tweener to do the animations of the UI elements */
-const Tweener = imports.ui.tweener;
+// const Tweener = imports.ui.tweener;
+const Tweener = imports.tweener.tweener;
 
 let BASE_URL = "http://192.168.0.105:8080";  // Raspberry-Pi server URL
 
@@ -87,12 +88,15 @@ function _refreshTVStatus() {
     }
     // Check if the status has changed (otherwise there is no need to re-write the data)
     if (tvStatusChanged.changed) {
+        log("CHANGE DETECTED...")
         // update the icon
         currentTvStatus = Number(tvStatusChanged.current_status);
         _setTvPaths();  // with the new status
         // Update icon
         icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
         // Send a notification only when someone else opened/closed the tv
+        // Maybe check this if you want to include more: 
+        //  https://stackoverflow.com/questions/32923811/set-notification-icon-in-gnome-shell-3-16-custom-extension
         Main.notify(_("TV " + (currentTvStatus===1 ? "OPENED" : "CLOSED")));
     }
     return true;  // in order to run the function forever (resource intensive..)
@@ -158,7 +162,10 @@ async function _changeStatus() {
     to create UI elements of gnome-shell.
     */
     if (!text) {
-        text = new St.Label({ style_class: 'tv-status-label', text: `${tvStatusText}` });
+        text = new St.Label({ 
+            style_class: 'tv-status-label', 
+            text: `${tvStatusText}` 
+        });
         Main.uiGroup.add_actor(text);
     }
 
@@ -184,11 +191,12 @@ async function _changeStatus() {
     to go to opacity 0%, in 2 seconds, with the type of transition easeOutQuad, and,
     when this animation has completed, we execute our function _hideText.
     */
-    await Tweener.addTween(text,
-                     { opacity: 0,
-                       time: 2,
-                       transition: 'easeOutQuad',
-                       onComplete: _hideText });
+    await Tweener.addTween(text, { 
+        opacity: 0,
+        time: 2,
+        transition: 'easeOutQuad',
+        onComplete: _hideText 
+    });
 }
 
 /*
@@ -199,8 +207,8 @@ function init() {
     button = new St.Bin({ style_class: 'panel-button',
                           reactive: true,
                           can_focus: true,
-                          x_fill: true,
-                          y_fill: false,
+                          x_expand: true,
+                          y_expand: false,
                           track_hover: true });
 
     /*
@@ -233,7 +241,7 @@ function init() {
     Mainloop.timeout_add_seconds(5, _refreshTVStatus);
 
     // Change the weather values every X seconds
-    Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
+    // Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
 }
 
 /*
