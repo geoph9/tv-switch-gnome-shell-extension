@@ -3,7 +3,7 @@ const Soup = imports.gi.Soup;
 // new sesssion
 var soupSyncSession = new Soup.SessionSync();
 
-function setCurrentTvStatus(tvStatusURL) {
+function getCurrentTvStatus(tvStatusURL) {
     // changes the value of tv_is_open based on the current tv status
     //  as retrieved from the server.
     // If the response code is not 200 (so there was a failure) then the status does not change.
@@ -26,7 +26,7 @@ function setCurrentTvStatus(tvStatusURL) {
 
 function sendRequest(url, type='GET') {
 	let message = Soup.Message.new(type, url);
-    let responseCode = soupSyncSession.send_message(message);
+    soupSyncSession.send_message(message);
     try {
         return JSON.parse(message['response-body'].data);
     } catch(error) {
