@@ -28,9 +28,8 @@ You may clone this repository and change the `extension.js` file. At first you m
 
 The installation and usage is then just like any other extension. You can get rid of the unwanted files (`.git`, `images/` directories and the `README.md` file) and then copy the rest to `~/.local/share/gnome-shell/extensions/tv-switch-gnome-shell-extension` (or wherever your gnome extensions are saved). You need to make sure that the name of the directory is the above (it must be the project's `uuid` which is defined in `metadata.json`).
 
-The extension is built for version `3.36` of the gnome-shell (will not work in `3.38` due to the big changes that occurred).
+The extension is now working with gnome `3.38`. The only changes where that `Tweener` is now imported as `const Tweener = imports.tweener.tweener;` (instead of from `imports.ui.tweener` in gnome `3.36`) and that `St.Bin` is now initialized with the `x_expand` and `y_expand` arguments.
 
 ## TODO:
 
 - Connect the temperature sensor to the extension. A new label should appear in the top bar that updates the home temperature every 5-15 minutes.
-- Function as a remote control (i don't have one and it would be useful in my case).

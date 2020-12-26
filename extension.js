@@ -43,11 +43,8 @@ let new_icon;
 Weather-Related Variables / Endpoints
 */
 const weatherStatsURL = `${BASE_URL}/api/get-weather-stats/`;  // URL for both the temp and humidity
-// Note: the apis below respond with a single value (not a json) in my case
-const tempURL = `${BASE_URL}/api/get-temperature/`;
-const humidityURL = `${BASE_URL}/api/get-humidity/`;
 const tvStatusURL = `${BASE_URL}/get-tv-status/`
-let currentStats;  // a dictionary with 2 keys (temp and humidity). Currently only temp is used.
+let currentStats;  // a dictionary with 2 keys (temperature and humidity).
 
 /*
 Function to call when the label is opacity 0%, as the label remains as a
@@ -66,7 +63,7 @@ function _hideText() {
 */
 function _refreshWeatherStats() {
     _getWeatherStats();
-    // Add weather stats implementation
+    // TODO: Add weather stats implementation
 
     return false; // will execute this function only once and abort.
 }
@@ -115,7 +112,7 @@ function _getWeatherStats() {
     */
     currentStats = Utils.sendRequest(weatherStatsURL, 'GET');
     if(currentStats === false){
-        currentStats = {temp: '-', humidity: '-'};
+        currentStats = {temperature: '-', humidity: '-'};
     }
     log("CURRENT STATS: " + currentStats);
 }
