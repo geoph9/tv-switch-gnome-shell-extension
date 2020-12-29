@@ -26,11 +26,15 @@ function getCurrentTvStatus(tvStatusURL) {
 
 function sendRequest(url, type='GET') {
 	let message = Soup.Message.new(type, url);
-    soupSyncSession.send_message(message);
-    try {
-        return JSON.parse(message['response-body'].data);
-    } catch(error) {
-        log("ERROR OCCURRED WHILE SENDING GET REQUEST TO " + url + ". ERROR WAS: " + error);
-        return false;
+    let responseCode = soupSyncSession.send_message(message);
+
+    if(responseCode == 200) {
+        try {
+            return JSON.parse(message['response-body'].data);
+        } catch(error) {
+            log("ERROR OCCURRED WHILE SENDING GET REQUEST TO " + url + ". ERROR WAS: " + error);
+            return false;
+        }
     }
+    return -1;
 }

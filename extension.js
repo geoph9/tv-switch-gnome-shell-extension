@@ -79,6 +79,14 @@ function _refreshTVStatus() {
         rpi. This will return true if the status has changed and false otherwise. If true, 
         we are going to set the new paths accordingly and update the icon.
     */
+    currentTvStatus = Utils.getCurrentTvStatus(tvStatusURL);  // this changes both new_icon and tv_is_open
+    if(currentTvStatus !== -1)  {  // if no error occurred
+        _setTvPaths();
+    } else {
+        log("tv-switch-gnome-shell-extension: getCurrentTvStatus returned an invalid code...");
+        disable();
+        throw new Error("tv-switch-gnome-shell-extension: getCurrentTvStatus returned an invalid code...");
+    }
     let tvStatusChanged = Utils.sendRequest(`${BASE_URL}/api/check-tv-status-changed/${currentTvStatus}/`, 'GET');
     if(tvStatusChanged === false){  // means an error occurred in sendRequest
         return true;  // do not change anything
@@ -149,6 +157,10 @@ async function _changeStatus() {
     let urlStatusData = Utils.sendRequest(tvSwitchURL, 'GET');
     if (urlStatusData === false) {
         tvStatusText = "Failed";
+    } else if (urlStatusData === -1) {
+        log("tv-switch-gnome-shell-extension: sendRequest returned an invalid code...");
+        disable();
+        throw new Error("tv-switch-gnome-shell-extension: sendRequest returned an invalid code...");
     } else {
         currentTvStatus = urlStatusData.currentStatus;
         // Change icon/text/url based on the request
@@ -214,6 +226,10 @@ function init() {
     currentTvStatus = Utils.getCurrentTvStatus(tvStatusURL);  // this changes both new_icon and tv_is_open
     if(currentTvStatus !== -1)  {  // if no error occurred
         _setTvPaths();
+    } else {
+        log("tv-switch-gnome-shell-extension: getCurrentTvStatus returned an invalid code...");
+        disable();
+        throw new Error("tv-switch-gnome-shell-extension: getCurrentTvStatus returned an invalid code...");
     }
     icon = new St.Icon({ style_class: 'system-status-icon' });
     // TODO: Get current tv-switch status and show the corresponding image
