@@ -42,7 +42,7 @@ let new_icon;
 /*
 Weather-Related Variables / Endpoints
 */
-const weatherStatsURL = `${BASE_URL}/api/get-weather-stats/`;  // URL for both the temp and humidity
+const weatherStatsURL = `${BASE_URL}/api/livingroom/get-weather-stats/`;  // URL for both the temp and humidity
 const tvStatusURL = `${BASE_URL}/get-tv-status/`
 let currentStats;  // a dictionary with 2 keys (temperature and humidity).
 
@@ -135,11 +135,11 @@ function _setTvPaths() {
     if (currentTvStatus === 1) {  // the tv is open
         new_icon = PauseTV;  // so that the icon in the top bar will shut the TV
         tvStatusText="TV Status: ON";
-        tvSwitchURL=`${BASE_URL}/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
+        tvSwitchURL=`${BASE_URL}/api/livingroom/turn-off-tv/`;  // turn-on-led is the endpoint for turning on the relay
     } else {
         new_icon = PlayTV;  // to open the TV
         tvStatusText="TV Status: OFF";
-        tvSwitchURL=`${BASE_URL}/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
+        tvSwitchURL=`${BASE_URL}/api/livingroom/turn-on-tv/`;  // turn-on-led is the endpoint for turning on the relay
     }
 }
 
