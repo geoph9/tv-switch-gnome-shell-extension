@@ -10,6 +10,7 @@ const Soup = imports.gi.Soup;
 
 /* Import St because is the library that allow you to create UI elements */
 const St = imports.gi.St;
+const Clutter = imports.gi.Clutter;
 
 const Gio = imports.gi.Gio;
 
@@ -42,9 +43,11 @@ let new_icon;
 /*
 Weather-Related Variables / Endpoints
 */
-const weatherStatsURL = `${BASE_URL}/api/livingroom/get-weather-stats/`;  // URL for both the temp and humidity
+const weatherStatsURL = `${BASE_URL}/api/bedroom/get-weather-stats/`;  // URL for both the temp and humidity
 const tvStatusURL = `${BASE_URL}/get-tv-status/`
 let currentStats;  // a dictionary with 2 keys (temperature and humidity).
+let weatherStatsPanel;
+let weatherStatsPanelText;
 
 /*
 Function to call when the label is opacity 0%, as the label remains as a
@@ -64,7 +67,13 @@ function _hideText() {
 function _refreshWeatherStats() {
     _getWeatherStats();
     // TODO: Add weather stats implementation
-
+    try {
+        const temperature = currentStats.temperature;
+        const humidity = currentStats.humidity;
+        weatherStatsPanelText.text = `${temperature}°C`;
+    } catch (error) {
+        logError(error);
+    }
     return false; // will execute this function only once and abort.
 }
 
@@ -120,9 +129,24 @@ function _getWeatherStats() {
     */
     currentStats = Utils.sendRequest(weatherStatsURL, 'GET');
     if(currentStats === false){
-        currentStats = {temperature: '-', humidity: '-'};
-    }
-    log("CURRENT STATS: " + currentStats);
+        currentStats = {
+            temperature: '-', 
+            humidity: '-'
+        };
+    } else if (currentStats === -1) {
+        log("tv-switch-gnome-shell-extension: sendRequest returned an invalid code for updating the weather statistics...");
+        disable();
+        throw new Error("tv-switch-gnome-shell-extension: sendRequest returned an invalid code for updating the weather statistics...");
+    } 
+    // else {
+    //     currentStats = {
+    //         temperature: 0,
+    //         humidity: 0
+    //     }
+    // }
+    log("CURRENT STATS: ");
+    log(currentStats.temperature);
+    log(currentStats.humidity);
 }
 
 
@@ -255,6 +279,24 @@ function init() {
 
     // Change the weather values every X seconds
     // Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
+
+    // Add the temperature in the panel
+    weatherStatsPanel = new St.Bin({
+        style_class : "panel-button",
+        reactive : true,
+        can_focus : true,
+        track_hover : true,
+        height : 30,
+    });
+    weatherStatsPanelText = new St.Label({
+        text : "-°C",
+        y_align: Clutter.ActorAlign.CENTER,
+    });
+    _refreshWeatherStats();
+    weatherStatsPanel.set_child(weatherStatsPanelText);
+    weatherStatsPanel.connect("button-press-event", () => {
+        _refreshWeatherStats();
+    });
 }
 
 /*
@@ -265,6 +307,7 @@ function enable() {
     We add the button we created before to the rigth panel of the top panel (where the sound and wifi settings are)
     */
     Main.panel._rightBox.insert_child_at_index(button, 0);
+    Main.panel._rightBox.insert_child_at_index(weatherStatsPanel, 1);
 }
 
 /*
@@ -274,4 +317,5 @@ We have to unconnect the signals we connect, we have to delete all UI elements w
 function disable() {
     // We remove the button from the right panel
     Main.panel._rightBox.remove_child(button);
+    Main.panel._rightBox.remove_child(weatherStatsPanel);
 }
