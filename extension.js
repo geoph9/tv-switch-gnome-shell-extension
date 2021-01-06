@@ -43,7 +43,7 @@ let new_icon;
 /*
 Weather-Related Variables / Endpoints
 */
-const weatherStatsURL = `${BASE_URL}/api/bedroom/get-weather-stats/`;  // URL for both the temp and humidity
+const weatherStatsURL = `${BASE_URL}/api/livingroom/get-weather-stats/`;  // URL for both the temp and humidity
 const tvStatusURL = `${BASE_URL}/get-tv-status/`
 let currentStats;  // a dictionary with 2 keys (temperature and humidity).
 let weatherStatsPanel;
@@ -70,7 +70,7 @@ function _refreshWeatherStats() {
     try {
         const temperature = currentStats.temperature;
         const humidity = currentStats.humidity;
-        weatherStatsPanelText.text = `${temperature}°C`;
+        weatherStatsPanelText.text = `${temperature}°C|${humidity}%`;
     } catch (error) {
         logError(error);
     }
@@ -144,9 +144,7 @@ function _getWeatherStats() {
     //         humidity: 0
     //     }
     // }
-    log("CURRENT STATS: ");
-    log(currentStats.temperature);
-    log(currentStats.humidity);
+    log(`Current Weather Stats: ${currentStats.temperature}C|${currentStats.humidity}%`)
 }
 
 
@@ -274,9 +272,6 @@ function init() {
     */
     button.connect('button-press-event', _changeStatus);
 
-    // Change the tv status every X seconds (check function for comments)
-    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
-
     // Change the weather values every X seconds
     // Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
 
@@ -308,6 +303,9 @@ function enable() {
     */
     Main.panel._rightBox.insert_child_at_index(button, 0);
     Main.panel._rightBox.insert_child_at_index(weatherStatsPanel, 1);
+
+    // Change the tv status every X seconds (check function for comments)
+    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
 }
 
 /*
