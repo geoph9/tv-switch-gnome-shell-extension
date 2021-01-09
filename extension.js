@@ -235,6 +235,7 @@ This is the init function, here we have to put our code to initialize our extens
 we have to be careful with init(), enable() and disable() and do the right things here.
 */
 function init() {
+    // Add the tv state/switch button in the panel
     button = new St.Bin({ style_class: 'panel-button',
                           reactive: true,
                           can_focus: true,
@@ -242,9 +243,24 @@ function init() {
                           y_expand: false,
                           track_hover: true });
 
-    /*
-    We create an icon with the system-status-icon icon and give it the name "system-run"
-    */
+    // Add the temperature in the panel
+    weatherStatsPanel = new St.Bin({
+        style_class : "panel-button",
+        reactive : true,
+        can_focus : true,
+        track_hover : true,
+        height : 30,
+    });
+}
+
+/*
+We have to write here our main extension code and the things that actually make works the extension(Add ui elements, signals, etc).
+*/
+function enable() {
+    /**
+     * ===== TV Station Area ======
+     */
+    // We create an icon with the system-status-icon icon and give it the name "system-run"
     currentTvStatus = Utils.getCurrentTvStatus(tvStatusURL);  // this changes both new_icon and tv_is_open
     if(currentTvStatus !== -1)  {  // if no error occurred
         _setTvPaths();
@@ -255,7 +271,7 @@ function init() {
     }
     icon = new St.Icon({ style_class: 'system-status-icon' });
     // TODO: Get current tv-switch status and show the corresponding image
-    log("GOT NEW ICON PATH: " + new_icon);
+    // log("GOT NEW ICON PATH: " + new_icon);
     icon.gicon = Gio.icon_new_for_string(`${Me.path}/icons/${new_icon}`);
 
     /*
@@ -272,17 +288,15 @@ function init() {
     */
     button.connect('button-press-event', _changeStatus);
 
-    // Change the weather values every X seconds
-    // Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
+    // Change the tv status every X seconds (check function for comments)
+    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
 
-    // Add the temperature in the panel
-    weatherStatsPanel = new St.Bin({
-        style_class : "panel-button",
-        reactive : true,
-        can_focus : true,
-        track_hover : true,
-        height : 30,
-    });
+    Main.panel._rightBox.insert_child_at_index(button, 0);
+
+
+    /**
+     * ===== Weather Area ======
+     */
     weatherStatsPanelText = new St.Label({
         text : "-°C",
         y_align: Clutter.ActorAlign.CENTER,
@@ -292,20 +306,12 @@ function init() {
     weatherStatsPanel.connect("button-press-event", () => {
         _refreshWeatherStats();
     });
-}
 
-/*
-We have to write here our main extension code and the things that actually make works the extension(Add ui elements, signals, etc).
-*/
-function enable() {
-    /*
-    We add the button we created before to the rigth panel of the top panel (where the sound and wifi settings are)
-    */
-    Main.panel._rightBox.insert_child_at_index(button, 0);
+    // Change the weather values every X seconds
+    // Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
+
     Main.panel._rightBox.insert_child_at_index(weatherStatsPanel, 1);
 
-    // Change the tv status every X seconds (check function for comments)
-    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
 }
 
 /*
@@ -316,4 +322,5 @@ function disable() {
     // We remove the button from the right panel
     Main.panel._rightBox.remove_child(button);
     Main.panel._rightBox.remove_child(weatherStatsPanel);
+    // TODO: Not sure if the timeout_add_seconds function stops refresing when disable is called. Check it.
 }
