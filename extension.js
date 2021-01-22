@@ -40,6 +40,8 @@ const PlayTV = 'tv-play-blue.png';  //'tv-play.svg';
 const PauseTV = 'tv-shut-blue.png';
 let new_icon;
 
+let refreshTimeout;
+
 /*
 Weather-Related Variables / Endpoints
 */
@@ -66,7 +68,6 @@ function _hideText() {
 */
 function _refreshWeatherStats() {
     _getWeatherStats();
-    // TODO: Add weather stats implementation
     try {
         const temperature = currentStats.temperature;
         const humidity = currentStats.humidity;
@@ -288,8 +289,6 @@ function enable() {
     */
     button.connect('button-press-event', _changeStatus);
 
-    // Change the tv status every X seconds (check function for comments)
-    Mainloop.timeout_add_seconds(5, _refreshTVStatus);
 
     Main.panel._rightBox.insert_child_at_index(button, 0);
 
@@ -307,8 +306,12 @@ function enable() {
         _refreshWeatherStats();
     });
 
-    // Change the weather values every X seconds
-    // Mainloop.timeout_add_seconds(60, _refreshWeatherStats);
+    // Change the tv status and the weather stats every X seconds (check function for comments)
+    refreshTimeout = Mainloop.timeout_add_seconds(10, () => {
+            _refreshTVStatus();
+            _refreshWeatherStats();
+        }    
+    );
 
     Main.panel._rightBox.insert_child_at_index(weatherStatsPanel, 1);
 
@@ -323,4 +326,6 @@ function disable() {
     Main.panel._rightBox.remove_child(button);
     Main.panel._rightBox.remove_child(weatherStatsPanel);
     // TODO: Not sure if the timeout_add_seconds function stops refresing when disable is called. Check it.
+    // remove mainloop
+    Mainloop.source_remove(refreshTimeout);
 }

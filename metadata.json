@@ -3,6 +3,6 @@
   "description": "Switches TV power to on/off by communicating with an ESP on the same network.",
   "uuid": "tv-switch-gnome-shell-extension",
   "shell-version": [
-    "3.36"
+    "3.38"
   ]
 }
